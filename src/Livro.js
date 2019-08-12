@@ -4,29 +4,33 @@ import InputCustomizado from './components/inputCustomizado'
 import PubSub from 'pubsub-js';
 import TratadorErros from './TratadorErros';
 
-class FormularioAutor extends Component {
+
+class FormularioLivro extends Component {
     constructor() {
         super();
         this.state = {
-            nome: '',
-            email: '',
-            senha: '',
+            titulo: '',
+            preco: '',
+            autorId: '',
         };
         this.enviaForm = this.enviaForm.bind(this)
+        this.setTitulo = this.setTitulo.bind(this)
+        this.setPreco = this.setPreco.bind(this)
+        this.setAutorId = this.setAutorId.bind(this)
     }
     enviaForm(event) {
         event.preventDefault();
         console.log(event)
         $.ajax({
-            url: "http://cdc-react.herokuapp.com/api/autores",
+            url: "http://cdc-react.herokuapp.com/api/livros",
             contentType: "application/json",
             dataType: "json",
             type: "post",
-            data: JSON.stringify({ nome: this.state.nome, email: this.state.email, senha: this.state.senha }),
+            data: JSON.stringify({ titulo: this.state.titulo, preco: this.state.preco, autor: this.state.autorId }),
             success: function (novaListagem) {
                 // disparar um aviso geral de novaListagem disponivel
-                PubSub.publish('atualiza-lista-autores', novaListagem)
-                this.setState({ nome: '', email: '', senha: '' })
+                PubSub.publish('atualiza-lista-livros', novaListagem)
+                this.setState({ titulo: '', preco: '', autorId: '' })
             }.bind(this),
 
             error: function (resposta) {
@@ -41,20 +45,31 @@ class FormularioAutor extends Component {
             }
         })
     }
-
-    salvarAlteracao(nomeInput, evento) {
-        let campoSendoAlterado = {};
-        campoSendoAlterado[nomeInput] = evento.target.value;
-        this.setState(campoSendoAlterado);
+    setTitulo(event) {
+        this.setState({ titulo: event.target.value })
     }
-
+    setPreco(event) {
+        this.setState({ preco: event.target.value })
+    }
+    setAutorId(event) {
+        this.setState({ autorId: event.target.value })
+    }
     render() {
         return (
             <div className="pure-form pure-form-aligned">
                 <form className="pure-form pure-form-aligned" onSubmit={this.enviaForm} method="post">
-                    <InputCustomizado label="Nome" id="nome" type="text" name="nome" value={this.state.nome} onChange={this.salvarAlteracao.bind(this, 'nome')} />
-                    <InputCustomizado label="Email" id="email" type="email" name="email" value={this.state.email} onChange={this.salvarAlteracao.bind(this, 'email')} />
-                    <InputCustomizado label="Senha" id="senha" type="password" name="senha" value={this.state.senha} onChange={this.salvarAlteracao.bind(this, 'senha')} />
+                    <InputCustomizado label="titulo" id="titulo" type="text" name="titulo" value={this.state.titulo} onChange={this.setTitulo} />
+                    <InputCustomizado label="preco" id="preco" type="text" name="preco" value={this.state.preco} onChange={this.setPreco} />
+
+                    <div className="pure-control-group">
+                        <label htmlFor="autorId">Autor</label>
+                        <select value={this.state.autorId} name="autorId" id="autorId" onChange={this.setAutorId}>
+                            <option value="">Selecione Autor</option>
+                            {this.props.autores.map(function (autor) {
+                                return <option value={autor.id}>{autor.nome}</option>
+                            })}
+                        </select>
+                    </div>
 
                     <div className="pure-control-group">
                         <label></label>
@@ -68,23 +83,25 @@ class FormularioAutor extends Component {
     }
 }
 
-class TabelaAutores extends Component {
+class TabelaLivros extends Component {
     render() {
         return (
             <div>
                 <table className="pure-table">
                     <thead>
                         <tr>
-                            <th>Nome</th>
-                            <th>email</th>
+                            <th>Titulo</th>
+                            <th>Preco</th>
+                            {/* <th>Autor</th> */}
                         </tr>
                     </thead>
                     <tbody>
-                        {this.props.lista.map((autor) => {
+                        {this.props.lista.map((livro) => {
                             return (
-                                <tr key={autor.id}>
-                                    <td>{autor.nome}</td>
-                                    <td>{autor.email}</td>
+                                <tr key={livro.id}>
+                                    <td>{livro.titulo}</td>
+                                    <td>{livro.preco}</td>
+                                    {/* <td>{livro.autor}</td> */}
                                 </tr>
                             )
                         })
@@ -96,25 +113,37 @@ class TabelaAutores extends Component {
     }
 }
 
-export default class AutorBox extends Component {
+
+
+export default class LivroBox extends Component {
     constructor() {
         super();
         this.state = {
             lista: [
             ],
+            autores: [],
         };
         this.atualizaListagem = this.atualizaListagem.bind(this)
     }
 
     componentDidMount() {
         $.ajax({
-            url: "http://cdc-react.herokuapp.com/api/autores",
+            url: "http://cdc-react.herokuapp.com/api/livros",
             dataType: "json",
             success: function (response) {
                 this.setState({ lista: response });
             }.bind(this)
         });
-        PubSub.subscribe('atualiza-lista-autores', function (topico, novaLista) {
+
+        $.ajax({
+            url: "http://cdc-react.herokuapp.com/api/autores",
+            dataType: "json",
+            success: function (response) {
+                this.setState({ autores: response });
+            }.bind(this)
+        });
+
+        PubSub.subscribe('atualiza-lista-livros', function (topico, novaLista) {
             this.setState({ lista: novaLista })
         }.bind(this));
     }
@@ -126,14 +155,14 @@ export default class AutorBox extends Component {
 
             <div>
                 <div className="header">
-                    <h1>Cadastro de Autores</h1>
+                    <h1>Cadastro de Livros</h1>
                 </div>
                 <div className="content" id="content">
-                    <FormularioAutor />
-                    <TabelaAutores lista={this.state.lista} />
+                    <FormularioLivro autores={this.state.autores} />
+                    <TabelaLivros lista={this.state.lista} />
                 </div>
 
             </div>
-        );
+        )
     }
 }
